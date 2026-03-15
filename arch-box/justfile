@@ -1,0 +1,34 @@
+set shell := ["bash", "-c"]
+set dotenv-load := true
+
+image_name := "arch-box"
+default_box_name := "arch"
+
+# Default recipe lists available commands
+default:
+    @just --list
+
+list:
+    distrobox list
+
+build:
+    docker build -t {{ image_name }} .
+
+build-no-cache:
+    docker build --no-cache -t {{ image_name }} .
+
+create box_name=default_box_name:
+    distrobox create --image {{ image_name }} --name {{ box_name }}
+    distrobox enter {{ box_name }}
+
+enter box_name=default_box_name:
+    distrobox enter {{ box_name }} -- zsh
+
+stop box_name=default_box_name:
+    distrobox stop {{ box_name }}
+
+rm box_name=default_box_name:
+    distrobox rm {{ box_name }}
+
+upgrade box_name=default_box_name:
+    distrobox enter {{ box_name }} -- yay -Syu --noconfirm
