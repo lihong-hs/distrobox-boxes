@@ -1,0 +1,42 @@
+# quay.io/archlinux/archlinux:latest - Red Hat
+# ghcr.io/archlinux/archlinux:latest  - GitHub Container Registry
+# archlinux:latest - Official Docker Hub image
+# docker.io/archlinux:latest - Docker Hub Community maintained same as official image
+
+
+FROM quay.io/archlinux/archlinux:latest AS builder
+
+# Install base-devel and git
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm base-devel git go
+
+# Create a non-root user for building (makepkg can't run as root)
+RUN useradd -m builder && \
+    echo "builder ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+
+USER builder
+WORKDIR /home/builder
+
+# Build yay
+RUN git clone https://aur.archlinux.org/yay.git && \
+    cd yay && \
+    makepkg -s --noconfirm  # Build only, don't install yet
+
+FROM quay.io/archlinux/archlinux:latest
+
+# Copy the built package and install it
+COPY --from=builder /home/builder/yay/*.pkg.tar.zst /tmp/
+
+# Install packages
+RUN pacman -Syu --noconfirm && \
+    pacman -S --noconfirm git nano zsh fzf zoxide fastfetch base-devel && \
+    pacman -U --noconfirm /tmp/*.pkg.tar.zst && \
+    # Install oh-my-posh from AUR using yay
+    yay -S --noconfirm oh-my-posh-bin && \
+    # Clean up
+    rm -rf /tmp/*.pkg.tar.zst && \
+    pacman -Scc --noconfirm
+
+# Set default shell
+SHELL ["/bin/zsh"]
+CMD ["/bin/zsh"]
